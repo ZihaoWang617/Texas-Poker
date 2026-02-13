@@ -1,51 +1,17 @@
 package com.wepoker.domain.model;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.*;
-
-/**
- * 房间状态机
- * State transitions:
- * WAITING -> DEALING -> PRE_FLOP -> FLOP -> TURN -> RIVER -> SHOWDOWN -> CLEANUP -> WAITING
- */
-public enum TableState {
-    WAITING,        // 等待玩家满坐
-    DEALING,        // 正在发牌
-    PRE_FLOP,       // 前翻
-    FLOP,           // 翻牌
-    TURN,           // 转牌
-    RIVER,          // 河牌
-    SHOWDOWN,       // 比牌
-    CLEANUP,        // 清算
-    CLOSED          // 房桌关闭
-}
-
-/**
- * Game Config - 桌位的静态配置
- */
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-@ToString
-public class TableConfig implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    private int tableId;
-    private String tableName;
-    private int maxPlayers;              // 2, 6, 9人
-    private long smallBlindAmount;       // 最小分值单位
-    private long bigBlindAmount;
-    private long minBuyIn;               // 最小买入 (50BB)
-    private long maxBuyIn;               // 最大买入 (200BB)
-    private double rakePercentage;       // 抽水比例 (如0.05 = 5%)
-    private long rakeMaxPerHand;         // 每手最多抽水多少
-    private int timeToAct;              // 玩家行动时限(秒) - 如15秒
-    private int timeBank;               // 延时时间(秒) - 如30秒
-    private boolean runItTwiceAllowed;  // 是否允许Run It Twice
-    private LocalDateTime createdAt;
-}
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
 /**
  * 德州扑克房间/桌位
@@ -72,11 +38,11 @@ public class Table implements Serializable {
     // 当前手牌信息
     private Hand currentHand;
     private Queue<String> dealerQueue;    // 洗牌算法队列（预生成的牌）
-    
+
     // 底池相关
     private long currentBetThisStreet;    // 该街最高bet额
     private long totalPotSize;            // 所有pot的总和
-    
+
     // 游戏进度
     private int handCount;                // 已进行的手数
     private int communityCardsDealt;      // 已发的公共牌数
@@ -120,14 +86,15 @@ public class Table implements Serializable {
      * 获取下一个需要行动的玩家
      */
     public Player getNextPlayerToAct() {
-        if (nextToActSeat >= 0) {
-            // 从nextToActSeat开始查找，跳过已弃牌的玩家
-            for (int i = 0; i < config.getMaxPlayers(); i++) {
-                int seat = (nextToActSeat + i) % config.getMaxPlayers();
-                Player p = players.get(seat);
-                if (p != null && p.isInHand() && !p.isAllIn() && !p.hasActed()) {
-                    return p;
-                }
+        if (config == null || nextToActSeat < 0) {
+            return null;
+        }
+
+        for (int i = 0; i < config.getMaxPlayers(); i++) {
+            int seat = (nextToActSeat + i) % config.getMaxPlayers();
+            Player p = players.get(seat);
+            if (p != null && p.isInHand() && !p.isAllIn() && !p.isHasActed()) {
+                return p;
             }
         }
         return null;
@@ -137,6 +104,9 @@ public class Table implements Serializable {
      * 玩家加入房间
      */
     public void addPlayer(Player player) throws IllegalStateException {
+        if (config == null) {
+            throw new IllegalStateException("Table config not initialized");
+        }
         if (players.size() >= config.getMaxPlayers()) {
             throw new IllegalStateException("Table is full");
         }
@@ -160,6 +130,9 @@ public class Table implements Serializable {
      * 移动按钮（dealer）
      */
     public void moveButton() {
+        if (config == null) {
+            return;
+        }
         int nextButton = (buttonSeat + 1) % config.getMaxPlayers();
         // 找到下一个有效座位
         for (int i = 0; i < config.getMaxPlayers(); i++) {
@@ -176,6 +149,9 @@ public class Table implements Serializable {
      * 基于Button位置更新小盲注、大盲注位置
      */
     private void updateBlindPositions() {
+        if (config == null) {
+            return;
+        }
         if (config.getMaxPlayers() == 2) {
             // Head-up: button is small blind
             this.smallBlindSeat = buttonSeat;
@@ -191,6 +167,9 @@ public class Table implements Serializable {
      * 状态转移到下一个街
      */
     public void moveToNextStreet() {
+        if (state == null) {
+            return;
+        }
         switch (state) {
             case PRE_FLOP -> setState(TableState.FLOP);
             case FLOP -> setState(TableState.TURN);
@@ -198,7 +177,8 @@ public class Table implements Serializable {
             case RIVER -> setState(TableState.SHOWDOWN);
             case SHOWDOWN -> setState(TableState.CLEANUP);
             case CLEANUP -> setState(TableState.WAITING);
-            default -> {}
+            default -> {
+            }
         }
     }
 
@@ -211,12 +191,64 @@ public class Table implements Serializable {
         this.nextToActSeat = -1;
         this.communityCardsDealt = 0;
         this.timeBankUsedCount = 0;
-        
+
         players.values().forEach(Player::resetForNewHand);
-        
+
         if (currentHand != null) {
             this.handCount++;
         }
         this.currentHand = null;
+    }
+
+    // Compatibility helpers for service layer fields using long ids and naming aliases.
+    public void setTableId(Long tableId) {
+        this.tableId = tableId == null ? 0 : tableId.intValue();
+    }
+
+    public Long getTableIdAsLong() {
+        return (long) this.tableId;
+    }
+
+    public TableState getCurrentState() {
+        return this.state;
+    }
+
+    public long getTotalPot() {
+        return this.totalPotSize;
+    }
+
+    public void setMaxPlayers(int maxPlayers) {
+        if (this.config == null) {
+            this.config = new TableConfig();
+        }
+        this.config.setMaxPlayers(maxPlayers);
+    }
+
+    public int allocateSeat() {
+        int max = this.config != null ? this.config.getMaxPlayers() : 6;
+        for (int seat = 0; seat < max; seat++) {
+            if (!players.containsKey(seat)) {
+                return seat;
+            }
+        }
+        return -1;
+    }
+
+    public void removePlayer(Long playerId) {
+        if (playerId == null) {
+            return;
+        }
+        removePlayer(String.valueOf(playerId));
+    }
+
+    public Player getPlayer(Long playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        String pid = String.valueOf(playerId);
+        return players.values().stream()
+            .filter(p -> pid.equals(p.getPlayerId()))
+            .findFirst()
+            .orElse(null);
     }
 }

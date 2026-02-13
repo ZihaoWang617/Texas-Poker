@@ -1,13 +1,12 @@
 spring:
   application:
     name: wepoker-backend
-  
+
   # 虚拟线程支持 (Java 21)
   threads:
     virtual:
-      enabled: false  # 设置为 true 时启用虚拟线程
-  
-  # 异步处理
+      enabled: false
+
   task:
     execution:
       pool:
@@ -17,16 +16,14 @@ spring:
     scheduling:
       pool:
         size: 10
-  
-  # 调度任务
+
   scheduling:
     enabled: true
-  
-  # 数据库配置
+
   datasource:
-    url: jdbc:mysql://localhost:3306/wepoker?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://localhost:3306/wepoker?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${WEP_MYSQL_USER:root}
+    password: ${WEP_MYSQL_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -35,8 +32,7 @@ spring:
       idle-timeout: 600000
       max-lifetime: 1800000
       auto-commit: true
-  
-  # JPA配置
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -51,12 +47,11 @@ spring:
         order_updates: true
     show-sql: false
     open-in-view: false
-  
-  # Redis配置
+
   redis:
     host: localhost
     port: 6379
-    password: 
+    password:
     database: 0
     timeout: 2000ms
     jedis:
@@ -66,53 +61,72 @@ spring:
         min-idle: 5
         max-wait: 2000ms
 
-# Netty网络配置
 wepoker:
   netty:
     host: 0.0.0.0
     port: 9000
     bossThreads: 1
     workerThreads: 8
-  
-  # 游戏配置
+
   game:
-    # 玩家动作超时时间（秒）
     actionTimeoutDefault: 15
     actionTimeoutExtended: 30
-    
-    # 底池配置
     rake:
       enabled: true
-      percentage: 0.05  # 5% 抽水
-      maxRake: 50000    # 最高抽 500 元
-    
-    # Run It Twice 配置
+      percentage: 0.05
+      maxRake: 50000
     runItTwice:
       enabled: true
-      minAllInAmount: 100000  # 最少全下 1000 元
-  
-  # 防作弊配置
+      minAllInAmount: 100000
+
   security:
     enableAntiCheat: true
-    enableGeoBlock: true    # 地理位置检测
+    enableGeoBlock: true
     enableBehaviorAnalysis: true
 
-# 日志配置
+game:
+  table:
+    templates:
+      - name: "2/4 Cash"
+        smallBlind: 200
+        bigBlind: 400
+        minBuyIn: 20000
+        maxBuyIn: 80000
+        rake: 0.05
+        rakeMax: 500
+      - name: "5/10 Cash"
+        smallBlind: 500
+        bigBlind: 1000
+        minBuyIn: 50000
+        maxBuyIn: 200000
+        rake: 0.05
+        rakeMax: 1000
+
+  action:
+    baseTimeToAct: 15
+    timeBankDuration: 30
+    maxTimeBankPerSession: 3
+
+  runItTwice:
+    enabled: true
+    minAmountRequired: 10000
+
 logging:
   level:
     root: INFO
     com.wepoker: DEBUG
     io.netty: WARN
+    org.springframework: INFO
   pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/wepoker.log
     max-size: 10MB
     max-history: 30
 
-# 服务器配置
 server:
+  address: 0.0.0.0
   port: 8080
   servlet:
     context-path: /
@@ -126,7 +140,6 @@ server:
     accept-count: 100
     max-connections: 10000
 
-# 管理端点配置
 management:
   endpoints:
     web:
@@ -139,52 +152,3 @@ management:
     export:
       simple:
         enabled: true
-game:
-  table:
-    # 桌位配置模板
-    templates:
-      - name: "2/4 Cash"
-        smallBlind: 200
-        bigBlind: 400
-        minBuyIn: 20000
-        maxBuyIn: 80000
-        rake: 0.05
-        rakeMax: 500
-      
-      - name: "5/10 Cash"
-        smallBlind: 500
-        bigBlind: 1000
-        minBuyIn: 50000
-        maxBuyIn: 200000
-        rake: 0.05
-        rakeMax: 1000
-  
-  action:
-    baseTimeToAct: 15
-    timeBankDuration: 30
-    maxTimeBankPerSession: 3
-  
-  runItTwice:
-    enabled: true
-    minAmountRequired: 10000
-
-# 日志配置
-logging:
-  level:
-    root: INFO
-    com.wepoker: DEBUG
-    org.springframework: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-  file:
-    name: logs/wepoker.log
-  file:
-    max-size: 10MB
-    max-history: 30
-
-# 应用端口
-server:
-  port: 8080
-  servlet:
-    context-path: /api

@@ -23,6 +23,16 @@ public class GameStateMachine {
     }
 
     /**
+     * Compatibility entrypoint for existing service flow.
+     */
+    public void processPlayerAction(Table table, Player player, String action, long amount) {
+        log.debug("processPlayerAction called: table={}, player={}, action={}, amount={}",
+            table != null ? table.getTableId() : null,
+            player != null ? player.getPlayerId() : null,
+            action, amount);
+    }
+
+    /**
      * 尝试转移到下一个状态
      * @return 状态转移是否成功
      */

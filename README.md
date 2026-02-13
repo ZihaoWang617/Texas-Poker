@@ -1,6 +1,6 @@
 # WePoker - 企业级德州扑克后端系统
 
-> 一个使用 **Java 21 + Spring Boot 3 + Netty** 开发的高并发、高可用的德州扑克游戏后端系统
+> 一个使用 **Java 17+ + Spring Boot 3 + Netty** 开发的高并发、高可用的德州扑克游戏后端系统
 
 ## 🎯 项目特色
 
@@ -22,21 +22,22 @@
 
 | 组件 | 技术 | 版本 |
 |-----|------|------|
-| **语言** | Java | 21 LTS |
+| **语言** | Java | 17+ |
 | **框架** | Spring Boot | 3.2.1 |
 | **网络** | Netty | 4.1.104 |
 | **缓存** | Redis | 7.2+ |
 | **数据库** | MySQL | 8.0+ |
 | **序列化** | Jackson (JSON) | 最新 |
-| **并发** | Virtual Threads | Java 21 |
+| **并发** | 多线程 + 可选 Virtual Threads | Java 21 可启用 |
 
 ## 🚀 快速开始
 
 ### 前置条件
-- **Java 21** （支持虚拟线程）
+- **Java 17+**（建议 21，可启用虚拟线程）
 - **MySQL 8.0+**
 - **Redis 7.2+**
 - **Maven 3.8+**
+- **Python 3.9+**（仅运行 `app.py` 时需要）
 
 ### 安装步骤
 
@@ -44,32 +45,45 @@
 ```bash
 git clone https://github.com/ZihaoWang617/Texas-Poker.git
 cd Texas-Poker
+./check-env.sh
 ```
 
-#### 2. 启动依赖服务
-
-**Docker Compose 方式（推荐）：**
-```bash
-docker-compose up -d redis mysql
-```
-
-**本地安装方式：**
-```bash
-# Redis
-redis-server
-
-# MySQL
-mysql -u root -p < schema.sql
-```
-
-#### 3. 编译项目
+#### 2. 编译项目
 ```bash
 mvn clean compile
 ```
 
-#### 4. 运行应用
+#### 3. 选择运行模式
+
+##### 3.1 本地模式（Homebrew MySQL/Redis）
 ```bash
-mvn spring-boot:run
+# 可选：先配置本地数据库密码
+cp .env.local.example .env.local
+
+./start-local.sh
+```
+
+停止本地依赖服务：
+```bash
+./stop-local.sh
+```
+
+##### 3.2 Docker 模式（docker-compose）
+```bash
+./start-docker.sh
+```
+
+停止 Docker 依赖服务：
+```bash
+./stop-docker.sh
+```
+
+#### 4. 运行前端演示（可选）
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 app.py
 ```
 
 #### 5. 验证启动
